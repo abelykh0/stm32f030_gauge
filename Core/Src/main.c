@@ -40,7 +40,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define EEPROM_ADDR (0x50 << 1)
-#define NMEA_MAX 128
+#define NMEA_MAX 90
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
