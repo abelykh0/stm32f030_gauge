@@ -267,8 +267,8 @@ int main(void)
 				  sprintf(
 				      display,
 				      "%02d:%02d",
-				      gps_time.hour,
-				      gps_time.minute
+				      gps_time.hour % 100,
+				      gps_time.minute % 100
 				  );
 
 
@@ -287,9 +287,9 @@ int main(void)
 				  sprintf(
 				      display,
 				      "%02d/%02d/20%02d",
-				      gps_time.day,
-				      gps_time.month,
-				      gps_time.year
+				      gps_time.day % 100,
+				      gps_time.month % 100,
+				      gps_time.year % 10000
 				  );
 
 				  Paint_DrawString_EN(
@@ -315,7 +315,7 @@ int main(void)
 				      22,
 				      8,
 				      display,
-				      &seg7_font_small,
+				      &seg7_font_large,
 				      BLACK,
 				      WHITE
 				  );

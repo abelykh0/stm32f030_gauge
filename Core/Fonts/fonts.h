@@ -80,7 +80,7 @@ typedef struct
 }cFONT;
 
 extern sFONT seg7_font_small;
-//extern sFONT seg7_font_large;
+extern sFONT seg7_font_large;
 
 #ifdef __cplusplus
 }
