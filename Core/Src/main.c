@@ -49,7 +49,10 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc;
+
 SPI_HandleTypeDef hspi2;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
@@ -82,6 +85,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_SPI2_Init(void);
+static void MX_ADC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -216,6 +220,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_SPI2_Init();
+  MX_ADC_Init();
   /* USER CODE BEGIN 2 */
 
   //EPD_Test();
@@ -235,108 +240,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  if (gps_ready)
-	      {
-	          char local[NMEA_MAX];
 
-	          __disable_irq();
-
-	          gps_ready = 0;
-	          strcpy(local, gps_latest);
-
-	          __enable_irq();
-
-	          // temporary: show raw NMEA on display
-
-	          if (strncmp(local, "$GNRMC", 6) == 0)
-	          {
-	        	  ParseGNRMC(local);
-
-	        	  partial_count++;
-
-	        	  Paint_ClearWindows(
-					  0,
-					  0,
-					  EPD_2IN66_HEIGHT - 1,
-					  EPD_2IN66_WIDTH - 1,
-					  WHITE
-				  );
-
-				  char display[32];
-
-				  sprintf(
-				      display,
-				      "%02d:%02d",
-				      gps_time.hour % 100,
-				      gps_time.minute % 100
-				  );
-
-
-				  Paint_Clear(WHITE);
-
-				  Paint_DrawString_EN(
-				      10,
-				      120,
-				      display,
-				      &seg7_font_small,
-				      BLACK,
-				      WHITE
-				  );
-
-
-				  sprintf(
-				      display,
-				      "%02d/%02d/20%02d",
-				      gps_time.day % 100,
-				      gps_time.month % 100,
-				      gps_time.year % 10000
-				  );
-
-				  Paint_DrawString_EN(
-				      120,
-				      120,
-				      display,
-				      &seg7_font_small,
-				      BLACK,
-				      WHITE
-				  );
-
-				  // Speed
-				  snprintf(
-				      display,
-				      sizeof(display),
-				      "%lu.%lu",
-				      gps_time.speed_kmh10 / 10,
-				      gps_time.speed_kmh10 % 10
-				  );
-
-
-				  Paint_DrawString_EN(
-				      22,
-				      8,
-				      display,
-				      &seg7_font_large,
-				      BLACK,
-				      WHITE
-				  );
-
-				  //Paint_DrawString_EN(10, 20, local, &Font12, BLACK, WHITE);
-
-	        	  if (partial_count >= 60)
-	        	  {
-	        	      partial_count = 0;
-
-	        	      EPD_2IN66_Init();
-	        	      EPD_2IN66_Display(BlackImage);
-	        	      EPD_2IN66_Init_Partial();
-	        	  }
-	        	  else
-	        	  {
-					  EPD_2IN66_Display(BlackImage);
-	        	  }
-	          }
-	          //HAL_Delay(1000);
-	      }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -355,8 +259,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI14|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSI14State = RCC_HSI14_ON;
+  RCC_OscInitStruct.HSI14CalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
@@ -384,6 +290,68 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC_Init(void)
+{
+
+  /* USER CODE BEGIN ADC_Init 0 */
+
+  /* USER CODE END ADC_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC_Init 1 */
+
+  /* USER CODE END ADC_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc.Instance = ADC1;
+  hadc.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
+  hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc.Init.LowPowerAutoWait = DISABLE;
+  hadc.Init.LowPowerAutoPowerOff = DISABLE;
+  hadc.Init.ContinuousConvMode = DISABLE;
+  hadc.Init.DiscontinuousConvMode = DISABLE;
+  hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc.Init.DMAContinuousRequests = DISABLE;
+  hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  if (HAL_ADC_Init(&hadc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_6;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC_Init 2 */
+
+  /* USER CODE END ADC_Init 2 */
+
 }
 
 /**
