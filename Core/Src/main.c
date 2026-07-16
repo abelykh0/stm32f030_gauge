@@ -293,7 +293,7 @@ int main(void)
 				  );
 
 				  Paint_DrawString_EN(
-				      110,
+				      120,
 				      120,
 				      display,
 				      &seg7_font_small,
