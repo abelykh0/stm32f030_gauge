@@ -21,7 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "D:\Projects\GitHub\stm32f030_gauge\Main\startup.h"
 #include "startup.h"
 /* USER CODE END Includes */
 

@@ -27,6 +27,7 @@ extern "C" void setup()
 extern "C" void loop()
 {
 	uint16_t fuel = ReadADC_Channel(ADC_CHANNEL_5);
+	uint16_t oil = ReadADC_Channel(ADC_CHANNEL_6);
 
 	if (gps_ready)
 	{
@@ -78,7 +79,21 @@ extern "C" void loop()
 			  fuel
 		  );
 		  Paint_DrawString_EN(
-			  200, 8,
+			  220, 8,
+			  display,
+			  &seg7_font_small,
+			  BLACK,
+			  WHITE
+		  );
+
+		  // Oil
+		  sprintf(
+			  display,
+			  "%04d",
+			  oil
+		  );
+		  Paint_DrawString_EN(
+			  220, 40,
 			  display,
 			  &seg7_font_small,
 			  BLACK,
