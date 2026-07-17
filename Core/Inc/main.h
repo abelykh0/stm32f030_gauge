@@ -62,6 +62,10 @@ void Error_Handler(void);
 #define SCK_GPIO_Port GPIOB
 #define DIN_Pin GPIO_PIN_15
 #define DIN_GPIO_Port GPIOB
+#define EEPROM_SCL_Pin GPIO_PIN_9
+#define EEPROM_SCL_GPIO_Port GPIOA
+#define EEPROM_SDA_Pin GPIO_PIN_10
+#define EEPROM_SDA_GPIO_Port GPIOA
 #define DC_Pin GPIO_PIN_3
 #define DC_GPIO_Port GPIOB
 #define SPI_CS_Pin GPIO_PIN_5

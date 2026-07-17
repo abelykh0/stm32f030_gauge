@@ -2,12 +2,13 @@
 #define __EEPROM_H
 
 #include "stdint.h"
+#include "main.h"
 
-#define SCL_PORT GPIOA
-#define SCL_PIN  GPIO_PIN_9
+#define SCL_PORT EEPROM_SCL_GPIO_Port
+#define SCL_PIN  EEPROM_SCL_Pin
 
-#define SDA_PORT GPIOA
-#define SDA_PIN  GPIO_PIN_10
+#define SDA_PORT EEPROM_SDA_GPIO_Port
+#define SDA_PIN  EEPROM_SDA_Pin
 
 #ifdef __cplusplus
 extern "C" {
