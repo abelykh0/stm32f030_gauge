@@ -187,6 +187,25 @@ void ParseGNRMC(char *nmea)
     	    100;
     }
 }
+
+uint16_t ReadADC_Channel(uint32_t channel)
+{
+    ADC_ChannelConfTypeDef sConfig = {0};
+    sConfig.Channel = channel;
+    sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
+    sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+
+    HAL_ADC_ConfigChannel(&hadc, &sConfig);
+
+    HAL_ADC_Start(&hadc);
+    HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
+
+    uint16_t value = HAL_ADC_GetValue(&hadc);
+
+    HAL_ADC_Stop(&hadc);
+
+    return value;
+}
 /* USER CODE END 0 */
 
 /**
@@ -242,6 +261,121 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  uint16_t fuel = ReadADC_Channel(ADC_CHANNEL_5);
+
+	  if (gps_ready)
+	  {
+		  char local[NMEA_MAX];
+
+		  __disable_irq();
+
+		  gps_ready = 0;
+		  strcpy(local, gps_latest);
+
+		  __enable_irq();
+
+		  // temporary: show raw NMEA on display
+
+		  if (strncmp(local, "$GNRMC", 6) == 0)
+		  {
+			  ParseGNRMC(local);
+
+			  partial_count++;
+
+			  Paint_ClearWindows(
+				  0,
+				  0,
+				  EPD_2IN66_HEIGHT - 1,
+				  EPD_2IN66_WIDTH - 1,
+				  WHITE
+			  );
+
+			  char display[32];
+
+			  // Speed
+			  snprintf(
+				  display,
+				  sizeof(display),
+				  "%lu.%lu",
+				  gps_time.speed_kmh10 / 10,
+				  gps_time.speed_kmh10 % 10
+			  );
+			  Paint_DrawString_EN(
+				  22,
+				  8,
+				  display,
+				  &seg7_font_large,
+				  BLACK,
+				  WHITE
+			  );
+
+			  // Fuel level
+			  sprintf(
+				  display,
+				  "%04d",
+				  fuel
+			  );
+			  Paint_DrawString_EN(
+				  200,
+				  8,
+				  display,
+				  &seg7_font_small,
+				  BLACK,
+				  WHITE
+			  );
+
+			  // Time
+			  sprintf(
+				  display,
+				  "%02d:%02d",
+				  gps_time.hour % 100,
+				  gps_time.minute % 100
+			  );
+			  Paint_DrawString_EN(
+				  10,
+				  120,
+				  display,
+				  &seg7_font_small,
+				  BLACK,
+				  WHITE
+			  );
+
+			  // Date
+			  sprintf(
+				  display,
+				  "%02d/%02d/20%02d",
+				  gps_time.day % 100,
+				  gps_time.month % 100,
+				  gps_time.year % 10000
+			  );
+			  Paint_DrawString_EN(
+				  120,
+				  120,
+				  display,
+				  &seg7_font_small,
+				  BLACK,
+				  WHITE
+			  );
+
+			  //Paint_DrawString_EN(10, 20, local, &Font12, BLACK, WHITE);
+
+			  if (partial_count >= 60)
+			  {
+				  partial_count = 0;
+
+				  //EPD_2IN66_Init();
+				  //EPD_2IN66_Display(BlackImage);
+				  EPD_2IN66_Update_Full();
+
+				  EPD_2IN66_Init_Partial();
+			  }
+			  else
+			  {
+				  EPD_2IN66_Display(BlackImage);
+			  }
+		  }
+		  //HAL_Delay(1000);
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -336,14 +470,6 @@ static void MX_ADC_Init(void)
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel to be converted.
-  */
-  sConfig.Channel = ADC_CHANNEL_6;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
     Error_Handler();

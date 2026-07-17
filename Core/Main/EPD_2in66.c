@@ -206,6 +206,15 @@ void EPD_2IN66_Init_Partial(void)
     EPD_2IN66_ReadBusy();
 }
 
+void EPD_2IN66_Update_Full(void)
+{
+    EPD_2IN66_SendCommand(0x22);
+    //EPD_2IN66_SendData(0xf7);
+    EPD_2IN66_SendData(0xc7);
+    EPD_2IN66_SendCommand(0x20);
+    EPD_2IN66_ReadBusy();
+}
+
 /******************************************************************************
 function :	Clear screen
 parameter:
