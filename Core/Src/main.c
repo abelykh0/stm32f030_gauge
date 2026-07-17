@@ -21,15 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "DEV_Config.h"
-#include "EPD_2in66.h"
-#include "GUI_Paint.h"
-#include "fonts.h"
-#include "minmea.h"
+//#include "D:\Projects\GitHub\stm32f030_gauge\Main\startup.h"
+#include "startup.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,8 +32,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define EEPROM_ADDR (0x50 << 1)
-#define NMEA_MAX 90
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,28 +47,6 @@ SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-static UBYTE BlackImage[EPD_2IN66_WIDTH * EPD_2IN66_HEIGHT / 8];
-
-uint8_t gps_rx_byte;
-char gps_line[NMEA_MAX];
-char gps_latest[NMEA_MAX];
-volatile uint8_t gps_ready = 0;
-uint16_t gps_index = 0;
-
-typedef struct
-{
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
-
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
-
-    uint32_t speed_kmh10;
-} GPS_Time_t;
-
-GPS_Time_t gps_time;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,120 +61,6 @@ static void MX_ADC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        uint32_t err = HAL_UART_GetError(huart);
-
-        if (err & HAL_UART_ERROR_ORE)
-        {
-            __HAL_UART_CLEAR_OREFLAG(huart);
-        }
-
-        HAL_UART_Receive_IT(
-            &huart1,
-            &gps_rx_byte,
-            1
-        );
-    }
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        char c = gps_rx_byte;
-
-        if (c == '\n')
-        {
-            gps_line[gps_index] = 0;
-
-            // copy completed sentence as "latest"
-            memcpy(
-                gps_latest,
-                gps_line,
-                gps_index + 1
-            );
-
-            gps_ready = 1;
-
-            gps_index = 0;
-        }
-        else
-        {
-            if (gps_index < NMEA_MAX - 1)
-            {
-                gps_line[gps_index++] = c;
-            }
-        }
-
-        // continue receiving
-        HAL_UART_Receive_IT(
-            &huart1,
-            &gps_rx_byte,
-            1
-        );
-    }
-}
-
-void ParseGNRMC(char *nmea)
-{
-    struct minmea_sentence_rmc frame;
-
-    if (minmea_parse_rmc(&frame, nmea))
-    {
-    	gps_time.minute = frame.time.minutes;
-    	gps_time.second = frame.time.seconds;
-
-    	gps_time.day = frame.date.day;
-    	gps_time.month = frame.date.month;
-    	gps_time.year = frame.date.year % 100;
-
-
-    	// apply timezone
-    	int h = frame.time.hours + (-5); // timezone
-
-    	if (h < 0)
-    	{
-    	    h += 24;
-    	    gps_time.day--;       // add month/year handling if needed
-    	}
-    	else if (h >= 24)
-    	{
-    	    h -= 24;
-    	    gps_time.day++;       // add month/year handling if needed
-    	}
-
-    	gps_time.hour = h;
-
-        // km/h * 10
-    	gps_time.speed_kmh10 =
-    	    ((int64_t)frame.speed.value * 1852) /
-    	    frame.speed.scale /
-    	    100;
-    }
-}
-
-uint16_t ReadADC_Channel(uint32_t channel)
-{
-    ADC_ChannelConfTypeDef sConfig = {0};
-    sConfig.Channel = channel;
-    sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-    sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
-
-    HAL_ADC_ConfigChannel(&hadc, &sConfig);
-
-    HAL_ADC_Start(&hadc);
-    HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
-
-    uint16_t value = HAL_ADC_GetValue(&hadc);
-
-    HAL_ADC_Stop(&hadc);
-
-    return value;
-}
 /* USER CODE END 0 */
 
 /**
@@ -240,144 +95,22 @@ int main(void)
   MX_USART1_UART_Init();
   MX_SPI2_Init();
   MX_ADC_Init();
+
   /* USER CODE BEGIN 2 */
-
-  //EPD_Test();
-  EPD_2IN66_Init();
-  EPD_2IN66_Clear();
-  DEV_Delay_ms(500);
-  Paint_NewImage(BlackImage, EPD_2IN66_WIDTH, EPD_2IN66_HEIGHT, 270, WHITE);
-  EPD_2IN66_Init_Partial();
-
-  HAL_UART_Receive_IT(&huart1, &gps_rx_byte, 1);
+  setup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  int partial_count = 0;
 
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint16_t fuel = ReadADC_Channel(ADC_CHANNEL_5);
-
-	  if (gps_ready)
-	  {
-		  char local[NMEA_MAX];
-
-		  __disable_irq();
-
-		  gps_ready = 0;
-		  strcpy(local, gps_latest);
-
-		  __enable_irq();
-
-		  // temporary: show raw NMEA on display
-
-		  if (strncmp(local, "$GNRMC", 6) == 0)
-		  {
-			  ParseGNRMC(local);
-
-			  partial_count++;
-
-			  Paint_ClearWindows(
-				  0,
-				  0,
-				  EPD_2IN66_HEIGHT - 1,
-				  EPD_2IN66_WIDTH - 1,
-				  WHITE
-			  );
-
-			  char display[32];
-
-			  // Speed
-			  snprintf(
-				  display,
-				  sizeof(display),
-				  "%lu.%lu",
-				  gps_time.speed_kmh10 / 10,
-				  gps_time.speed_kmh10 % 10
-			  );
-			  Paint_DrawString_EN(
-				  22,
-				  8,
-				  display,
-				  &seg7_font_large,
-				  BLACK,
-				  WHITE
-			  );
-
-			  // Fuel level
-			  sprintf(
-				  display,
-				  "%04d",
-				  fuel
-			  );
-			  Paint_DrawString_EN(
-				  200,
-				  8,
-				  display,
-				  &seg7_font_small,
-				  BLACK,
-				  WHITE
-			  );
-
-			  // Time
-			  sprintf(
-				  display,
-				  "%02d:%02d",
-				  gps_time.hour % 100,
-				  gps_time.minute % 100
-			  );
-			  Paint_DrawString_EN(
-				  10,
-				  120,
-				  display,
-				  &seg7_font_small,
-				  BLACK,
-				  WHITE
-			  );
-
-			  // Date
-			  sprintf(
-				  display,
-				  "%02d/%02d/20%02d",
-				  gps_time.day % 100,
-				  gps_time.month % 100,
-				  gps_time.year % 10000
-			  );
-			  Paint_DrawString_EN(
-				  120,
-				  120,
-				  display,
-				  &seg7_font_small,
-				  BLACK,
-				  WHITE
-			  );
-
-			  //Paint_DrawString_EN(10, 20, local, &Font12, BLACK, WHITE);
-
-			  if (partial_count >= 60)
-			  {
-				  partial_count = 0;
-
-				  //EPD_2IN66_Init();
-				  //EPD_2IN66_Display(BlackImage);
-				  EPD_2IN66_Update_Full();
-
-				  EPD_2IN66_Init_Partial();
-			  }
-			  else
-			  {
-				  EPD_2IN66_Display(BlackImage);
-			  }
-		  }
-		  //HAL_Delay(1000);
-	  }
+	loop();
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
