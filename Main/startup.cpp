@@ -39,7 +39,7 @@ extern "C" void setup()
 extern "C" void loop()
 {
 	uint16_t fuel = adc_buffer[5];
-	uint16_t oil = adc_buffer[6];
+	uint16_t oil = adc_buffer[1];
 
 	if (gps_ready)
 	{

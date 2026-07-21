@@ -31,8 +31,8 @@ GPS_Result_t ParseGNRMC(char* nmea)
         gps_result.month = frame.date.month;
         gps_result.year = frame.date.year % 100;
 
-        // apply timezone (hardcoded -5)
-        int h = frame.time.hours + (-5);
+        // apply timezone (hardcoded -4)
+        int h = frame.time.hours + (-4);
         if (h < 0)
         {
             h += 24;
