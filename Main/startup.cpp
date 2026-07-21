@@ -9,9 +9,11 @@
 #include "screen.h"
 #include "GUI_Paint.h"
 
+#define ADC_CHANNEL_COUNT 8
 extern UART_HandleTypeDef huart1;
 
 static int partial_count = 0;
+static uint16_t adc_buffer[ADC_CHANNEL_COUNT] __attribute__((aligned(4)));
 
 extern "C" void setup()
 {
@@ -22,12 +24,22 @@ extern "C" void setup()
 	EPD_2IN66_Init_Partial();
 
 	gps_init();
+
+    if (HAL_ADCEx_Calibration_Start(&hadc) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    if (HAL_ADC_Start_DMA(&hadc, (uint32_t*)adc_buffer, ADC_CHANNEL_COUNT) != HAL_OK)
+    {
+        Error_Handler();
+    }
 }
 
 extern "C" void loop()
 {
-	uint16_t fuel = ReadADC_Channel(ADC_CHANNEL_5);
-	uint16_t oil = ReadADC_Channel(ADC_CHANNEL_6);
+	uint16_t fuel = adc_buffer[5];
+	uint16_t oil = adc_buffer[6];
 
 	if (gps_ready)
 	{
